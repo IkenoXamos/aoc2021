@@ -2,68 +2,83 @@ import run from "aocrunner";
 
 const parseInput = (rawInput: string) => rawInput.split('\n').map(value => parseInt(value, 2));
 
-function mostCommonBitMask(input: number[], position: number, length: number): number {
-  const positionFromRight = length - 1 - position;
-  const mask = 0b1 << positionFromRight;
-
-  if (input.length === 1) {
-    return input[0] & mask;
-  }
-
-  const count = input.reduce<number>((acc, value) => (value & mask) > 0 ? acc + 1 : acc, 0);
-
-  return (count >= (input.length / 2)) ? mask : 0;
-}
-
-function leastCommonBitMask(input: number[], position: number, length: number): number {
-  const positionFromRight = length - 1 - position;
-  const mask = 0b1 << positionFromRight;
-
-  if (input.length === 1) {
-    return input[0] & mask;
-  }
-
-  const count = input.reduce<number>((acc, value) => (value & mask) > 0 ? acc + 1 : acc, 0);
-
-  return (count >= (input.length / 2)) ? 0 : mask;
-}
-
-const mostCommonBit = (input: number[], length: number): [number, number] => {
-  let result: [number, number] = [0b0, 0b0];
-
-  // Iterate through the bit positions (left to right)
-  for (let i = 0; i < length; i++) {
-    result[0] |= mostCommonBitMask(input, i, length);
-    result[1] |= leastCommonBitMask(input, i, length);
-  }
-
-  return result;
-};
-
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
   const length = rawInput.split('\n')[0].length;
 
-  const [gamma, epsilon] = mostCommonBit(input, length);
+  let gamma = 0, epsilon = 0;
 
+  // iterate through bit positions (left to right)
+  for (let position = length - 1; position >= 0; position--) {
+
+    // iterate through the provided binary numbers, counting as we go
+    let count = 0;
+    for (let i = 0; i < input.length; i++) {
+      const bitValue = input[i] >> position & 1; // compute the bit value
+
+      // only count the numbers that had a 1 in the provided bit position
+      if (bitValue === 1) count++;
+    }
+
+    // if at least half of the numbers had a 1, our result has a 1. Otherwise it stays as 0 (which it already was from initialization)
+    if (count >= input.length / 2) {
+      // Set the bit to 1 at the given position
+      gamma |= 1 << position;
+    } else {
+      // We do the opposite for the least common
+      epsilon |= 1 << position;
+    }
+  }
+
+  // Multiply the results
   return gamma * epsilon;
 };
 
+// This process is pretty much the same as part 1, except that we steadily filter down our choices
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
   const length = rawInput.split('\n')[0].length;
 
-  let oxygen = [...input];
-  let co2 = [...input];
+  // We make copies of the inputs so we can filter them separately
+  let oxygen = [...input], co2 = [...input];
 
-  for (let i = 0; (oxygen.length > 1 || co2.length > 1) && i < length; i++) {
-    const commonMask = mostCommonBitMask(oxygen, i, length);
-    const leastMask = leastCommonBitMask(co2, i, length);
+  // Iterate through the bit positions, but stopping when we only have 1 left in our list of choices
+  for (let position = length - 1; (oxygen.length > 1) && (position >= 0); position--) {
 
-    oxygen = oxygen.filter(value => (value & (1 << length - 1 - i)) === commonMask);
-    co2 = co2.filter(value => (value & (1 << length - 1 - i)) === leastMask);
+    // same as part 1, we count the 1s
+    let count = 0;
+    for (let i = 0; i < oxygen.length; i++) {
+      const bitValue = oxygen[i] >> position & 1;
+
+      if (bitValue === 1) count++;
+    }
+
+    // But our process here is slightly different, since instead of computing a value, we simply filter our remaining results
+    // We compute a mask that represents what value should be in the provided bit position
+    const mask = (count >= oxygen.length / 2) ? (1 << position) : 0;
+
+    // Only keep the values that have the same bit value as the mask
+    oxygen = oxygen.filter(value => (value >> position & 1) === (mask >> position & 1));
   }
 
+  // Same as above, but for least common
+  for (let position = length - 1; (co2.length > 1) && (position >= 0); position--) {
+
+    let count = 0;
+    for (let i = 0; i < co2.length; i++) {
+      const bitValue = co2[i] >> position & 1;
+
+      if (bitValue > 0) count++;
+    }
+
+    // Our mask is swapped compared to the mask for oxygen above
+    // This tracks our least common bits
+    const mask = (count >= co2.length / 2) ? 0 : (1 << position);
+
+    co2 = co2.filter(value => (value >> position & 1) === (mask >> position & 1));
+  }
+
+  // Multiply the results
   return oxygen[0] * co2[0];
 };
 
