@@ -1,25 +1,26 @@
 import run from "aocrunner";
 
 type Direction = "forward" | "up" | "down";
-type RawInstruction = `${Direction} ${number}`
-type Instruction = [dir: Direction, distance: number];
+type Instruction = [dir: Direction, value: number];
+type Part1Output = [distance: number, depth: number];
+type Part2Output = [distance: number, depth: number, aim: number];
 
 const parseInput = (rawInput: string) => {
 
   return rawInput.split('\n').map(instruction => {
     const result = instruction.split(' ');
-    const [dir, distance] = result;
+    const [dir, value] = result;
 
-    return [dir, Number(distance)];
-  }) as Instruction[];
+    return [dir, Number(value)] as Instruction;
+  });
 };
 
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
 
-  const [distance, depth] = input.reduce<[distance: number, depth: number]>((acc, value) => {
+  const [distance, depth] = input.reduce<Part1Output>((acc, instruction) => {
 
-    const [dir, distance] = value;
+    const [dir, distance] = instruction;
 
     switch (dir) {
       case "forward":
@@ -37,16 +38,16 @@ const part1 = (rawInput: string) => {
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
 
-  const [distance, depth] = input.reduce<[distance: number, depth: number, aim: number]>((acc, value) => {
-    const [dir, distance] = value;
+  const [distance, depth] = input.reduce<Part2Output>((acc, instruction) => {
+    const [dir, value] = instruction;
 
     switch (dir) {
       case "forward":
-        return [acc[0] + distance, acc[1] + acc[2] * distance, acc[2]];
+        return [acc[0] + value, acc[1] + acc[2] * value, acc[2]];
       case "up":
-        return [acc[0], acc[1], acc[2] - distance];
+        return [acc[0], acc[1], acc[2] - value];
       case "down":
-        return [acc[0], acc[1], acc[2] + distance];
+        return [acc[0], acc[1], acc[2] + value];
     }
   }, [0, 0, 0]);
 
