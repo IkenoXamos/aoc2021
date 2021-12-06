@@ -2,58 +2,250 @@ import run from "aocrunner";
 
 const parseInput = (rawInput: string) => rawInput.split(',').map(str => Number(str.trim()));
 
-const part1 = (rawInput: string) => {
-  let input = parseInput(rawInput);
+class Node<T = number> {
+  constructor(public value: T, public next?: Node<T> | undefined) {
+    this.value = value;
+    this.next = next;
+  }
+}
 
-  const days = 80;
+class LinkedList<T = number> {
+  constructor(public head?: Node<T> | undefined, public tail?: Node<T> | undefined) {
+    this.head = head;
+    this.tail = tail;
+  }
 
-  for (let day = 0; day < days; day++) {
-    let count = 0;
-    input = input.map((timer) => {
-      if (timer === 0) {
-        count++;
-        return 6;
+  public get( predicate: (value: T) => boolean): Node<T> | undefined {
+    let runner = this.head;
+
+    while(runner !== undefined) {
+      if(predicate(runner.value)) {
+        return runner;
       }
 
-      return timer - 1;
-    });
+      runner = runner.next;
+    }
 
-    for (let i = 0; i < count; i++) {
-      input.push(8);
+    return undefined;
+  }
+
+  public add(value: T): Node<T> {
+    if(!this.head || !this.tail) {
+      this.head = new Node<T>(value);
+      this.tail = this.head;
+      return this.head;
+    }
+
+    this.tail.next = new Node<T>(value);
+    this.tail = this.tail.next;
+    return this.tail;
+  }
+
+  public remove(node: Node<T>): Node<T> | undefined {
+    if(this.head === undefined || this.tail === undefined) {
+      return undefined;
+    }
+
+    if(this.head === node && this.tail === node) {
+      this.head = undefined;
+      this.tail = undefined;
+      return node;
+    }
+
+    if(this.head === node && this.tail !== node) {
+      this.head = this.head.next;
+      return node;
+    }
+
+    if(this.head !== node && this.tail === node) {
+      let runner = this.head;
+      while(runner.next !== this.tail) {
+        runner = runner.next as Node<T>;
+      }
+
+      this.tail = runner;
+      return node;
+    }
+
+    let runner = this.head;
+    while(runner.next != undefined) {
+      if(runner.next === node) {
+        runner.next = node.next;
+        return node;
+      }
+      runner = runner.next as Node<T>;
+    }
+
+    return undefined;
+  }
+
+  public removeByValue(value: T): Node<T> | undefined {
+    if(this.head === undefined || this.tail === undefined) {
+      return undefined;
+    }
+
+    if(this.head.value === value && this.tail.value === value) {
+      const node = this.head;
+      this.head = undefined;
+      this.tail = undefined;
+      return node;
+    }
+
+    if(this.head.value === value && this.tail.value !== value) {
+      const node = this.head;
+      this.head = this.head.next;
+      return node;
+    }
+
+    if(this.head.value !== value && this.tail.value === value) {
+      let runner = this.head;
+      while(runner.next !== this.tail) {
+        runner = runner.next as Node<T>;
+      }
+
+      this.tail = runner;
+      return runner;
+    }
+
+    let runner = this.head;
+    while(runner.next != undefined) {
+      if(runner.next.value === value) {
+        const node = runner.next;
+        runner.next = node.next;
+        return node;
+      }
+      runner = runner.next as Node<T>;
+    }
+
+    return undefined;
+  }
+
+  public print() {
+    for(let runner = this.head; runner !== undefined; runner = runner.next) {
+      console.log(runner);
     }
   }
 
-  return input.length;
+  public get length(): number {
+    let length = 0;
+
+    for(let runner = this.head; runner !== undefined; runner = runner.next) {
+      length++;
+    }
+
+    return length;
+  }
+}
+
+interface FishData {
+  timer: number;
+  count: number;
+}
+
+const part1 = (rawInput: string) => {
+  let input = parseInput(rawInput);
+  const DAYS = 80;
+
+  const primary = new LinkedList<FishData>();
+  for(let i = 0; i < 7; i++) {
+    primary.add({timer: i, count: 0});
+  }
+
+  const secondary = new LinkedList<FishData>();
+
+  for(let timer of input) {
+    for(let runner = primary.head; runner !== undefined; runner = runner.next) {
+      if(timer === runner.value.timer) {
+        runner.value.count++;
+        break;
+      }
+    }
+  }
+
+  for(let i = 0; i < DAYS; i++) {
+    for(let runner = primary.head; runner !== undefined; runner = runner.next) {
+      if(runner.value.timer === 0) {
+        runner.value.timer = 6;
+
+        secondary.add({timer: 9, count: runner.value.count});
+      } else {
+        runner.value.timer--;
+      }
+    }
+
+    for(let runner = secondary.head; runner !== undefined; runner = runner.next) {
+      if(runner.value.timer === 7) {
+        secondary.remove(runner);
+        const node = primary.get( (value) => value.timer === 6) as Node<FishData>;
+
+        node.value.count += runner.value.count;
+      } else {
+        runner.value.timer--;
+      }
+    }
+  }
+
+  let count = 0;
+  for(let runner = primary.head; runner !== undefined; runner = runner.next) {
+    count += runner.value.count;
+  }
+  for(let runner = secondary.head; runner !== undefined; runner = runner.next) {
+    count += runner.value.count;
+  }
+
+  return count;
 };
 
-// The ending amount of fish can be computed
-// We start with n fish
-// For each fish, there is a starting timer t_1 ... t_n
-// Each fish will spawn their first child at t_k + 1
-// Then every 7 days afterwards
-// Every new fish starts with a timer of 8 (which takes 9 days)
-// Then produces a new fish every 7 days, as normal
 
-// n + [floor]sum(k = 1 ... n)(days - t_k - 1) / 9 ...
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
+  const DAYS = 256;
 
-  let count = input.length; // The starting fish
+  const primary = new LinkedList<FishData>();
+  for(let i = 0; i < 7; i++) {
+    primary.add({timer: i, count: 0});
+  }
 
-  for (let timer of input) {
-    const days = 256 - timer - 1;
-    count++; // The first child is spawned
+  const secondary = new LinkedList<FishData>();
 
-    const generations = Math.floor(days / 7); // The number of generations of new fish that result from t_k
-    // We will iteratively step down from this to compute the number of standard generations spawned via the remaining days
-    count += generations;
-    const remaining = days % 7;
-
-    for (let i = 0; i < generations; i++) {
-      const child_days = i === 0 ? days + remaining : days;
-      const child_generations = Math.floor((child_days - i * 9) / 7);
-      count += 2 ** child_generations;
+  for(let timer of input) {
+    for(let runner = primary.head; runner !== undefined; runner = runner.next) {
+      if(timer === runner.value.timer) {
+        runner.value.count++;
+        break;
+      }
     }
+  }
+
+  for(let i = 0; i < DAYS; i++) {
+    for(let runner = primary.head; runner !== undefined; runner = runner.next) {
+      if(runner.value.timer === 0) {
+        runner.value.timer = 6;
+
+        secondary.add({timer: 9, count: runner.value.count});
+      } else {
+        runner.value.timer--;
+      }
+    }
+
+    for(let runner = secondary.head; runner !== undefined; runner = runner.next) {
+      if(runner.value.timer === 7) {
+        secondary.remove(runner);
+        const node = primary.get( (value) => value.timer === 6) as Node<FishData>;
+
+        node.value.count += runner.value.count;
+      } else {
+        runner.value.timer--;
+      }
+    }
+  }
+
+  let count = 0;
+  for(let runner = primary.head; runner !== undefined; runner = runner.next) {
+    count += runner.value.count;
+  }
+  for(let runner = secondary.head; runner !== undefined; runner = runner.next) {
+    count += runner.value.count;
   }
 
   return count;
@@ -74,5 +266,5 @@ run({
     ],
     solution: part2,
   },
-  trimTestInputs: true,
+  trimTestInputs: true
 });
