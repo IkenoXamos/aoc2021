@@ -29,3 +29,7 @@
  *     import { myUtil } from '../utils'
  *
  */
+
+export function transpose<T>(grid: T[][]): T[][] {
+  return grid[0].map((col, i) => grid.map(row => row[i]));
+}

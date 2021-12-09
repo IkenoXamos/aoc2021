@@ -57,10 +57,6 @@ function deduce_invalid_mappings(connections: boolean[][], part: string, validIn
   }
 }
 
-function transpose<T>(grid: T[][]): T[][] {
-  return grid[0].map((col, i) => grid.map(row => row[i]));
-}
-
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
 
